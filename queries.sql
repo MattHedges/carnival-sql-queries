@@ -491,3 +491,202 @@ UPDATE public.sales
 
 select * from sales where sale_id=5004;
 --If the pickup date is after the purchase date but less than 7 days out from the purchase date, add 4 additional days to the pickup date.
+
+
+
+--Book 3 chapter 6
+
+--Because Carnival is a single company, we want to ensure that there is consistency in the data provided to the user. 
+--Each dealership has it's own website but we want to make sure the website URL are consistent and easy to remember. 
+--Therefore, any time a new dealership is added or an existing dealership is updated, we want to 
+--ensure that the website URL has the following format: 
+--http://www.carnivalcars.com/{name of the dealership with underscores separating words}.
+
+
+
+--If a phone number is not provided for a new dealership, set the phone number to 
+--the default customer care number 777-111-0305.
+
+
+
+--For accounting purposes, the name of the state needs to be part of the dealership's tax id. 
+--For example, if the tax id provided is bv-832-2h-se8w for a dealership in Virginia, 
+--then it needs to be put into the database as bv-832-2h-se8w--virginia.
+
+
+
+--Book 3 Chapter 7
+--Add a new role for employees called Automotive Mechanic
+
+
+
+--Add five new mechanics, their data is up to you
+
+
+
+--Each new mechanic will be working at all three of these dealerships: Meeler Autos of San Diego, 
+--Meadley Autos of California and Major Autos of Florida
+
+
+
+--Create a new dealership in Washington, D.C. called Felphun Automotive
+
+
+
+--Hire 3 new employees for the new dealership: Sales Manager, General Manager and Customer Service.
+
+
+
+--All employees that currently work at Nelsen Autos of Illinois will now start working at Cain Autos of Missouri instead.
+
+
+--Book 3 Chapter 8
+--Adding 5 brand new 2021 Honda CR-Vs to the inventory. 
+--They have I4 engines and are classified as a Crossover SUV or CUV. 
+--All of them have beige interiors but the exterior colors are Lilac, Dark Red, Lime, Navy and Sand. 
+--The floor price is $21,755 and the MSR price is $18,999.
+
+
+
+--For the CX-5s and CX-9s in the inventory that have not been sold, change the year of the car to 2021 
+--since we will be updating our stock of Mazdas. For all other unsold Mazdas, update the year to 2020. 
+--The newer Mazdas all have red and black interiors.
+
+
+
+--The vehicle with VIN KNDPB3A20D7558809 is about to be returned. 
+--Carnival has a pretty cool program where it offers the returned vehicle to the most recently 
+--hired employee at 70% of the cost it previously sold for. 
+--The most recent employee accepts this offer and will purchase the vehicle once it is returned. 
+--The employee and dealership who sold the car originally will be on the new sales transaction.
+
+
+
+--Book 3 Team Project
+
+--Set up a trigger on the Sales table. When a new row is added, 
+--add a new record to the Accounts Receivable table with the deposit as credit_amount, 
+--the timestamp as date_received and the appropriate sale_id.
+create TABLE Accounts_Receivable (
+  id SERIAL PRIMARY KEY,
+  credit_amount NUMERIC(10,2),
+  date_received TIMESTAMP NOT NULL DEFAULT NOW(),
+  sale_id INTEGER REFERENCES sales(sale_id)
+);
+
+
+CREATE OR REPLACE FUNCTION insert_into_accounts_receivable() 
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO Accounts_Receivable (credit_amount, date_received, sale_id)
+  VALUES (NEW.deposit, NOW(), NEW.id);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER insert_into_accounts_receivable_trigger
+AFTER INSERT ON Sales
+FOR EACH ROW
+EXECUTE FUNCTION insert_into_accounts_receivable();
+
+
+/*
+2. Set up a trigger on the Sales table for when the sale_returned flag is updated. 
+Add a new row to the Accounts Receivable table with the deposit as debit_amount, the timestamp as date_received, etc.
+*/
+
+
+
+CREATE OR REPLACE FUNCTION update_accounts_receivable()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Check if the sale_returned flag has been updated
+    IF OLD.sale_returned IS DISTINCT FROM NEW.sale_returned THEN
+        -- If the flag has been set to true, insert a new row into the Accounts Receivable table
+        IF NEW.sale_returned = 'true' THEN
+            INSERT INTO Accounts_Receivable (debit_amount, date_received, sale_id)
+            VALUES (NEW.deposit, NOW(), new.sale_id);
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+CREATE or replace TRIGGER update_accounts_receivable
+	AFTER UPDATE ON sales
+	FOR EACH ROW
+	EXECUTE FUNCTION update_accounts_receivable();
+
+
+UPDATE public.sales
+	SET sale_returned=true
+	WHERE sale_id=6;
+
+
+select * from sales;
+select * from accounts_receivable;
+
+
+--Create a stored procedure with a transaction to handle hiring a new employee. 
+--Add a new record for the employee in the Employees table and add a record to the Dealershipemployees table 
+--for the two dealerships the new employee will start at.
+3.
+CREATE OR REPLACE PROCEDURE hire_employee_proc(
+    IN p_first_name VARCHAR,
+    IN p_last_name VARCHAR,
+    IN p_email_address VARCHAR,
+    IN p_phone VARCHAR,
+    IN p_employee_type_id INTEGER,
+    IN p_dealership1_id INTEGER,
+    IN p_dealership2_id INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    p_employee_id INTEGER;
+BEGIN
+    -- Add new record to Employees table
+    INSERT INTO employees(first_name, last_name, email_address, phone, employee_type_id)
+    VALUES(p_first_name, p_last_name, p_email_address, p_phone, p_employee_type_id)
+    RETURNING employee_id INTO p_employee_id;
+
+   -- Add new record to Dealershipemployees table for dealership1
+   	INSERT INTO dealershipemployees(dealership_id, employee_id)
+	VALUES(p_dealership1_id, p_employee_id);
+
+    -- Add new record to Dealershipemployees table for dealership2
+	INSERT INTO dealershipemployees(dealership_id, employee_id)
+	VALUES(p_dealership2_id, p_employee_id);
+    -- Commit the transaction
+    COMMIT;
+END;
+$$;
+
+call hire_employee_proc('brooke', 'weathers', 'hello@me.com', '916-920-8924', 1, 2, 3);
+
+
+
+
+
+--Create a stored procedure with a transaction to handle an employee leaving. 
+--The employee record is removed and all records associating the employee with dealerships must also be removed.
+
+CREATE or replace PROCEDURE remove_employee(id INTEGER)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  DELETE FROM dealershipemployees WHERE employee_id = id;
+  DELETE FROM employees WHERE employee_id = id;
+  COMMIT;
+END;
+$$;
+
+
+call remove_employee(1006);
+
+select * from employees where employee_id=1006;
+select * from dealershipemployees where employee_id=1006;
+
+

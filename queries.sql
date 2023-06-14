@@ -690,3 +690,291 @@ select * from employees where employee_id=1006;
 select * from dealershipemployees where employee_id=1006;
 
 
+
+-- BOOK 4 Group Project
+
+
+--Using CREATE to add new tables
+
+-- Which tables need to be created after reviewing the ERD?
+
+create table VehicleBodyType (
+	vehicle_body_type_id SERIAL primary key,
+	name varchar(20)
+);
+
+create table VehicleModel (
+	vehicle_model_id SERIAL primary key,
+	name varchar(20)
+);
+
+create table VehicleMake (
+	vehicle_make_id SERIAL primary key,
+	name varchar(20)
+);
+
+
+-- What levels of normalization will these new tables be supporting?
+   -- 1NF - atomic values (keys) on new tables
+   -- 2NF - only depends on one key to reference data
+   -- 3NF - breaks out things into independent tables with their own primary keys
+
+
+-- Do any of these tables have a foreign key in another table? What is the child table that would hold the foreign key(s).
+	-- The vehicletypes table would hold the foreign keys for the 3 new tables
+
+
+-- Data migration
+
+select * from vehicletypes;
+
+-- migrate body_type from vehicletypes to put it in the vehiclebodytypes table
+INSERT INTO vehiclebodytype (name) VALUES ('SUV');
+select * from vehiclebodytype;
+
+-- migrate make from vehicletypes to put it in the vehiclemake table
+INSERT INTO vehiclemake (name) VALUES ('Chevrolet');
+INSERT INTO vehiclemake (name) VALUES ('Ford');
+INSERT INTO vehiclemake (name) VALUES ('Mazda');
+INSERT INTO vehiclemake (name) VALUES ('Nissan');
+INSERT INTO vehiclemake (name) VALUES ('Volkswagen');
+
+select * from vehiclemake;
+
+-- migrate model from vehicletypes to put it in the vehiclemodel table
+INSERT INTO vehiclemodel (name) VALUES ('Altima');
+INSERT INTO vehiclemodel (name) VALUES ('Atlas');
+INSERT INTO vehiclemodel (name) VALUES ('Beetle');
+INSERT INTO vehiclemodel (name) VALUES ('Blazer');
+INSERT INTO vehiclemodel (name) VALUES ('CX-5');
+INSERT INTO vehiclemodel (name) VALUES ('CX-9');
+INSERT INTO vehiclemodel (name) VALUES ('Corvette');
+INSERT INTO vehiclemodel (name) VALUES ('EcoSport');
+INSERT INTO vehiclemodel (name) VALUES ('F-250');
+INSERT INTO vehiclemodel (name) VALUES ('Fusion');
+INSERT INTO vehiclemodel (name) VALUES ('MX-5 Miata');
+INSERT INTO vehiclemodel (name) VALUES ('Maxima');
+INSERT INTO vehiclemodel (name) VALUES ('Passat');
+INSERT INTO vehiclemodel (name) VALUES ('Silverado');
+INSERT INTO vehiclemodel (name) VALUES ('Titan');
+INSERT INTO vehiclemodel (name) VALUES ('Transit-150 Cargo');
+
+select * from vehiclemodel;
+
+
+--Using ALTER to change the structure of a table and its data.
+--Adding foreign key contraints
+
+select * from vehicletypes;
+
+alter table vehicletypes 
+	add column vehicle_body_type_id int references vehiclebodytype (vehicle_body_type_id),
+	add column vehicle_make_id int references vehiclemake (vehicle_make_id),
+	add column vehicle_model_id int references vehiclemodel (vehicle_model_id);
+
+--Identifying the order of operations for each query
+
+--Running a data migration to alter data values
+
+select * from vehiclebodytype;
+
+UPDATE vehicletypes 
+SET vehicle_body_type_id = CASE  
+					WHEN body_type = '1' THEN 1 
+					WHEN body_type = '2' THEN 2
+					WHEN body_type = '3' THEN 3
+					WHEN body_type = '4' THEN 4
+                 END;
+                
+select * from vehiclemake;
+
+UPDATE vehicletypes 				 
+SET      vehicle_make_id = CASE  
+					WHEN make = 'Chevrolet' THEN 1 
+					WHEN make = 'Ford' THEN 2
+					WHEN make = 'Mazda' THEN 3
+					WHEN make = 'Nissan' THEN 4
+					WHEN make = 'Volkswagen' THEN 5
+				  END;
+				 
+select * from vehicletypes;
+				  
+UPDATE vehicletypes 
+SET     vehicle_model_id =  CASE  
+					WHEN model = 'Altima' THEN 1
+					WHEN model = 'Atlas' THEN 2
+					WHEN model = 'Beetle' THEN 3
+					WHEN model = 'Blazer' THEN 4
+					WHEN model = 'CX-5' THEN 5
+					WHEN model = 'CX-9' THEN 6
+					WHEN model = 'Corvette' THEN 7
+					WHEN model = 'EcoSport' THEN 8
+					WHEN model = 'F-250' THEN 9
+					WHEN model = 'Fusion' THEN 10
+					WHEN model = 'MX-5 Miata' THEN 11
+					WHEN model = 'Maxima' THEN 12
+					WHEN model = 'Passat' THEN 13
+					WHEN model = 'Silverado' THEN 14
+					WHEN model = 'Titan' THEN 15
+					WHEN model = 'Transit-150 Cargo' THEN 16
+				 END ;
+				
+alter table vehicletypes 
+	drop column body_type,
+	drop column make,
+	drop column model;
+
+
+
+
+/*Carnival has decided to reevaluate their database and see if they can optimize the existing structure and improve query performance times. This team project is designed for your team to analyze the entire database and create a .SQL script file that will execute the improvements to make the database better. Expect to discuss your team's improvements and why you made them. Please draw on all the knowledge you have gotten from this course to implement your ideas!
+
+Things you might find useful
+Creating tables
+Altering exsiting tables
+Drop statements
+Views
+Triggers (Formatting data or ensuring new related records get created)
+Stored Procedures that group functionality
+Transactions
+Indexing
+Data migrations
+Normalizing the database further vs denormalizing*/
+
+
+select * from sales;
+select distinct payment_method from sales;
+-- add payment type table for payment_method in sales table
+
+create table paymentmethodtypes (
+	payment_method_type_id SERIAL primary key,
+	name varchar(50)
+);
+
+insert into paymentmethodtypes (name) values
+	('diners-club-us-ca'),
+	('instapayment'),
+	('china-unionpay'),
+	('bankcard'),
+	('diners-club-carte-blanche'),
+	('visa'),
+	('diners-club-international'),
+	('laser'),
+	('maestro'),
+	('americanexpress'),
+	('2'),
+	('solo'),
+	('switch'),
+	('jcb'),
+	('visa-electron'),
+	('mastercard'),
+	('diners-club-enroute');
+
+select * from paymentmethodtypes;
+
+alter table sales 
+	add column payment_method_type_id int references paymentmethodtypes (payment_method_type_id);
+
+
+UPDATE sales 
+SET payment_method_type_id = CASE  
+					WHEN payment_method = 'diners-club-us-ca' THEN 1 
+					WHEN payment_method = 'instapayment' THEN 2
+					WHEN payment_method = 'china-unionpay' THEN 3
+					WHEN payment_method = 'bankcard' THEN 4
+					WHEN payment_method = 'diners-club-carte-blanche' THEN 5
+					WHEN payment_method = 'visa' THEN 6
+					WHEN payment_method = 'diners-club-international' THEN 7
+					WHEN payment_method = 'laser' THEN 8
+					WHEN payment_method = 'maestro' THEN 9
+					WHEN payment_method = 'americanexpress' THEN 10
+					WHEN payment_method = '2' THEN 11
+					WHEN payment_method = 'solo' THEN 12
+					WHEN payment_method = 'switch' THEN 13
+					WHEN payment_method = 'jcb' THEN 14
+					WHEN payment_method = 'visa-electron' THEN 15
+					WHEN payment_method = 'mastercard' THEN 16
+					WHEN payment_method = 'diners-club-enroute' THEN 17
+                 END;
+                
+
+alter table sales drop column payment_method;
+
+select * from vehicles;
+select distinct interior_color from vehicles;
+
+-- exterior and interior color on vehicles table
+create table interiorcolortypes (
+	interior_color_type_id SERIAL primary key,
+	name varchar(50)
+);
+
+alter table vehicles 
+	add column interior_color_type_id int references interiorcolortypes (interior_color_type_id);
+
+
+insert into interiorcolortypes (name) values
+	('Orange'),
+		('Indigo'),
+			('Red'),
+				('Green'),
+					('Yellow'),
+						('Pink'),
+							('Mauv'),
+								('Teal'),
+									('Crimson'),
+										('Blue'),
+											('Purple'),
+												('Goldenrod'),
+													('Violet'),
+														('Maroon'),
+															('Turquoise'),
+																('Fuscia'),
+																	('Khaki'),
+																		('Puce'),
+																			('Aquamarine');
+																		
+select * from vehicles;
+
+
+UPDATE vehicles 
+SET interior_color_type_id = CASE  
+					WHEN interior_color = 'Orange' THEN 1 
+					WHEN interior_color = 'Indigo' THEN 2
+					WHEN interior_color = 'Red' THEN 3
+					WHEN interior_color = 'Green' THEN 4
+					WHEN interior_color = 'Yellow' THEN 5
+					WHEN interior_color = 'Pink' THEN 6
+					WHEN interior_color = 'Mauv' THEN 7
+					WHEN interior_color = 'Teal' THEN 8
+					WHEN interior_color = 'Crimson' THEN 9
+					WHEN interior_color = 'Blue' THEN 10
+					WHEN interior_color = 'Purple' THEN 11
+					WHEN interior_color = 'Goldenrod' THEN 12
+					WHEN interior_color = 'Violet' THEN 13
+					WHEN interior_color = 'Maroon' THEN 14
+					WHEN interior_color = 'Turquoise' THEN 15
+					WHEN interior_color = 'Fuscia' THEN 16
+					WHEN interior_color = 'Khaki' THEN 17
+										WHEN interior_color = 'Puce' THEN 18
+					WHEN interior_color = 'Aquamarine' THEN 19
+                 END;
+
+alter table vehicles drop column interior_color;
+
+
+
+
+
+-- TODO Thursday all the rest of this stuff
+
+create table exteriorcolortypes (
+	exterior_color_type_id SERIAL primary key,
+	name varchar(50)
+);
+
+-- enginetype on vehicles
+
+select * from customers;
+-- remove phone from customers
+
